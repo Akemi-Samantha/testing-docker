@@ -1,0 +1,68 @@
+version: '3.8'
+
+services:
+  mysql:
+    image: mysql:latest
+    container_name: mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: morangogostosinho123#
+      MYSQL_DATABASE: cadastroreceita
+
+    ports:
+      - "3307:3306"
+    volumes:
+      - mysql-data:/var/lib/mysql
+    networks:
+        - cadastroreceita
+  rabbitmq:
+    image: rabbitmq:3.12-management
+    container_name: rabbitmq
+    ports:
+      - "5672:5672"   # Porta padrão do RabbitMQ
+      - "15672:15672" # Porta da interface de gerenciamento web do RabbitMQ
+    environment:
+      RABBITMQ_DEFAULT_USER: guest
+      RABBITMQ_DEFAULT_PASS: guest
+    networks:
+      - cadastroreceita
+
+  cadastropratos:
+    build: ./CadastroPratos/CadastroPratos
+    container_name: cadastropratos
+    ports:
+      - "8081:8081"
+    depends_on:
+      - rabbitmq
+      - mysql
+    environment:
+      SPRING_RABBITMQ_HOST: rabbitmq
+      SPRING_RABBITMQ_PORT: 5672
+      SPRING_RABBITMQ_USERNAME: guest
+      SPRING_RABBITMQ_PASSWORD: guest
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/cadastroreceita?useTimezone=true&serverTimezone=America/Sao_Paulo
+      SPRING_DATASOURCE_USERNAME: root
+      SPRING_DATASOURCE_PASSWORD: morangogostosinho123#
+    networks:
+      - cadastroreceita
+
+  clienteprojeto:
+    build: ./ClienteProjeto/ClienteProjeto
+    container_name: clienteprojeto
+    ports:
+      - "8080:8080"
+    depends_on:
+      - rabbitmq
+    environment:
+      SPRING_RABBITMQ_HOST: rabbitmq
+      SPRING_RABBITMQ_PORT: 5672
+      SPRING_RABBITMQ_USERNAME: guest
+      SPRING_RABBITMQ_PASSWORD: guest
+      URL_PRATOS: http://cadastropratos:8081/prato
+    networks:
+      - cadastroreceita
+
+volumes:
+  mysql-data:
+networks:
+  cadastroreceita:
+    driver: bridge
